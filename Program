@@ -1,0 +1,104 @@
+#define ledR 8
+#define ledG 7
+#define ledY 12
+#define motionSensor 2
+#define tempSensor A1
+#define additionalSensor1 3
+#define additionalSensor2 4
+
+int interrCount = 0;
+
+void setup()
+{
+  Serial.begin(9600);
+  pinMode(ledR, OUTPUT);
+  pinMode(ledG, OUTPUT);
+  pinMode(ledY, OUTPUT);
+
+  pinMode(additionalSensor1, INPUT);
+  pinMode(additionalSensor2, INPUT);
+
+  digitalWrite(ledR, LOW);
+  digitalWrite(ledG, LOW);
+  digitalWrite(ledY, LOW);
+
+  // Attach interrupt only for motion sensor
+  attachInterrupt(digitalPinToInterrupt(motionSensor), interruptMotion, FALLING);
+
+  // Set up timer interrupt
+  setupTimerInterrupt();
+}
+
+void loop()
+{
+  // Your existing loop code here
+  int tempValue = analogRead(tempSensor);
+  float voltage = (tempValue / 1023.0) * 5000.0;
+  float temperature = (voltage - 500.0) / 10.0;
+  Serial.print("TEMPERATURE: ");
+  Serial.print(temperature);
+  Serial.println(" °C");
+
+  // Polling for additional sensors
+  if (digitalRead(additionalSensor1) == HIGH) {
+    
+    Serial.println("INTERRUPT! ADDITIONAL SENSOR 1 TRIGGERED!");
+  }
+
+  if (digitalRead(additionalSensor2) == HIGH) {
+   
+    Serial.println("INTERRUPT! ADDITIONAL SENSOR 2 TRIGGERED!");
+  }
+
+  interrCount++;
+
+  digitalWrite(ledR, HIGH);
+  digitalWrite(ledG, LOW);
+  delay(300);
+  digitalWrite(ledR, LOW);
+  digitalWrite(ledG, HIGH);
+  delay(300);
+
+  if (interrCount == 10)
+  {
+    interrCount = 0;
+    digitalWrite(ledY, LOW);
+    Serial.println("NORMAL FUNCTIONALITY");
+  }
+}
+
+void interruptMotion()
+{
+  digitalWrite(ledY, HIGH);
+  Serial.println("INTERRUPT! INTERRUPT! INTERRUPT! MOTION DETECTED!");
+}
+
+void setupTimerInterrupt()
+{
+  // Timer 1 setup
+  TCCR1A = 0;
+  TCCR1B = 0;
+  TCNT1 = 0;
+
+  // Set the compare value for 1 Hz frequency
+  OCR1A = 15624;
+
+  // Configure Timer 1 for CTC (Clear Timer on Compare Match) mode
+  TCCR1B |= (1 << WGM12);
+
+  // Set prescaler to 256
+  TCCR1B |= (1 << CS12);
+
+  // Enable Timer 1 compare match interrupt
+  TIMSK1 |= (1 << OCIE1A);
+
+  // Enable global interrupts
+  sei();
+}
+
+// Timer 1 compare match interrupt service routine
+ISR(TIMER1_COMPA_vect)
+{
+  
+  digitalWrite(13, !digitalRead(13));
+}
